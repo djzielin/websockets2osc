@@ -1,5 +1,5 @@
 const WebSocket = require('ws');
-const { Client, Server } = require('node-osc');
+const { Client, Server, Message} = require('node-osc');
 //var prompt = require('prompt');
 const readline = require('readline');
 
