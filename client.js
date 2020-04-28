@@ -43,6 +43,11 @@ rl.question('What OSC port should we send to? ', (answer) => {
 		niceShutdown();
 	});
 
+	ws.on("close", (code,reason) => {
+		console.log("looks like the MRE is shutting down.");
+		niceShutdown();
+	});
+
 	ws.on('message', function incoming(data) { //process incoming 
 		console.log("received: " + data);
 		const messageArray = JSON.parse(data); //convert JSON to javascript array
