@@ -1,28 +1,48 @@
 const WebSocket = require('ws');
-const { Client, Server, Message} = require('node-osc');
-//var prompt = require('prompt');
+const { Client, Server, Message } = require('node-osc');
 const readline = require('readline');
 
 const rl = readline.createInterface({
 	input: process.stdin,
 	output: process.stdout
-  });
+});
 
 console.clear();
 
+/*rl.question('What OSC port should we send to? ', (answer) => {
+	const oscPort = parseInt(answer);
+	console.log("trying to use port: " + oscPort);
+});*/
+
+let ws = null;
+
+const client = new Client('127.0.0.1', 7400);
+
+setInterval(() => {
+	if (ws === null) {
+		console.log("------------------------------------------------------------");
+		console.log("1 seconds has expired. trying to connect to server... ");
+		connectToServer();
+	}
+}, 1000);
+
+process.on("SIGINT", () => {
+	console.log("received SIGINT (control-c)");
+	niceShutdown();
+
+});
+
 function niceShutdown() {
 	console.log("shutting down nicely...");
-	try{
+	try {
 		client.close();
-	}catch(err)
-	{
+	} catch (err) {
 		//console.log("couldn't close osc connection (perhaps not setup yet)");
 	}
-	
-	try{
+
+	try {
 		ws.terminate();
-	}catch(err)
-	{
+	} catch (err) {
 		//console.log("couldn't close ws connection (perhaps not setup yet)");
 	}
 
@@ -30,22 +50,24 @@ function niceShutdown() {
 	process.exit();
 }
 
+function connectToServer() {
+	ws = new WebSocket('ws://45.55.43.77:3903');
 
-rl.question('What OSC port should we send to? ', (answer) => {
-	const oscPort = parseInt(answer);
-	console.log("trying to use port: " + oscPort);
-	const client = new Client('127.0.0.1', 7400);
-
-	const ws = new WebSocket('ws://45.55.43.77:3902');
-
-	ws.on('error', error => {
-		console.log("ERROR: couldn't connect to remote server. MRE might not be running.");
-		niceShutdown();
+	ws.on('error', (error) => {
+		console.log("ERROR: couldn't connect to remote server.");
+		weAreConnected = false;
+		ws = null;
 	});
 
-	ws.on("close", (code,reason) => {
-		console.log("looks like the MRE is shutting down.");
-		niceShutdown();
+	ws.on('close', (code, reason) => {
+		console.log("CLOSE: connection closed");
+		weAreConnected = false;
+		ws = null;
+	});
+
+	ws.on('open', () => {
+		weAreConnected = true;
+		console.log("Success! we are connected to server!");
 	});
 
 	ws.on('message', function incoming(data) { //process incoming 
@@ -58,11 +80,15 @@ rl.question('What OSC port should we send to? ', (answer) => {
 			message.append(messageArray[i]);
 		}
 
-		client.send(message, (err) => {
-			if (err) {
-				niceShutdown();
-			}
-		});
-	});		
-});
+		try {
+			client.send(message, (err) => {
+				if (err) {
+					console.log("ERROR during OSC Send!");
+				}
+			});
+		} catch (err) {
+			console.log("ERROR during OSC Send!");
+		}
+	});
+}
 
